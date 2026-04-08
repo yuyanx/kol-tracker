@@ -186,7 +186,7 @@ export default function KOLTracker() {
     const i = kols.length;
     const newKol = {
       name: customName.trim(),
-      handle: customHandle.trim() || `@${customName.trim().toLowerCase().replace(/\\s+/g, "")}`,
+      handle: customHandle.trim() || `@${customName.trim().toLowerCase().replace(/\s+/g, "")}`,
       field: customField, avatar: AVATARS[i % AVATARS.length], color: COLORS[i % COLORS.length], default: false,
     };
     setKols(p => [...p, newKol]);
@@ -203,7 +203,7 @@ export default function KOLTracker() {
 
   const pIcon = p => ({ twitter: "𝕏", youtube: "▶", newsletter: "✉", blog: "✍", linkedin: "in", web: "🌐", error: "⚠" }[p] || "📄");
   const pLabel = p => ({ twitter: "X", youtube: "YT", newsletter: "NEWS", blog: "BLOG", linkedin: "LNKD", web: "WEB" }[p] || "");
-  const ago = d => { if (!d) return ""; const s = Math.floor((Date.now() - d) / 1000); if (s < 60) return "just now"; if (s < 3600) return \`\${Math.floor(s / 60)}m\`; if (s < 86400) return \`\${Math.floor(s / 3600)}h\`; return \`\${Math.floor(s / 86400)}d\`; };
+  const ago = d => { if (!d) return ""; const s = Math.floor((Date.now() - d) / 1000); if (s < 60) return "just now"; if (s < 3600) return `${Math.floor(s / 60)}m`; if (s < 86400) return `${Math.floor(s / 3600)}h`; return `${Math.floor(s / 86400)}d`; };
   const M = { fontFamily: "'Space Mono', monospace" };
 
   return (
@@ -260,7 +260,7 @@ export default function KOLTracker() {
             color: "#F43F5E", ...M, fontSize: 12, cursor: (scanning || !!loading) ? "default" : "pointer",
             letterSpacing: 1, opacity: (scanning || !!loading) ? 0.6 : 1,
           }}>
-            {scanning ? \`SCANNING \${progress.c}/\${progress.t}\` : "⚡ SCAN ALL"}
+            {scanning ? `SCANNING ${progress.c}/${progress.t}` : "⚡ SCAN ALL"}
           </button>
         </div>
 
@@ -278,13 +278,13 @@ export default function KOLTracker() {
             return (
               <div key={kol.name} style={{
                 background: justAdded ? "rgba(78,205,196,0.06)" : "rgba(255,255,255,0.03)",
-                border: \`1px solid \${justAdded ? "#4ECDC440" : isExp ? kol.color + "60" : "#1A1A25"}\`,
+                border: `1px solid ${justAdded ? "#4ECDC440" : isExp ? kol.color + "60" : "#1A1A25"}`,
                 borderRadius: 16, overflow: "hidden", transition: "all 0.4s ease",
                 gridColumn: isExp ? "1 / -1" : "auto",
               }}>
                 <div onClick={() => { if (!data && !isLoad) fetchKol(kol); setExpanded(isExp ? null : kol.name); }}
-                  style={{ padding: "18px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 14, background: isExp ? \`linear-gradient(135deg, \${kol.color}08, transparent)\` : "transparent" }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: \`\${kol.color}18\`, border: \`1px solid \${kol.color}30\`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{kol.avatar}</div>
+                  style={{ padding: "18px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 14, background: isExp ? `linear-gradient(135deg, ${kol.color}08, transparent)` : "transparent" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: `${kol.color}18`, border: `1px solid ${kol.color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{kol.avatar}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 600 }}>{kol.name}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
@@ -296,19 +296,19 @@ export default function KOLTracker() {
                     {ref && <span style={{ ...M, fontSize: 10, color: "#4ECDC4" }}>{ago(ref)}</span>}
                     {data && !isLoad && <button onClick={e => { e.stopPropagation(); fetchKol(kol); }} title="Refresh" style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #2A2A35", background: "transparent", color: "#6B6B76", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>↻</button>}
                     {!kol.default && <button onClick={e => { e.stopPropagation(); removeKol(kol.name); }} title="Remove" style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #2A2A35", background: "transparent", color: "#6B6B76", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>✕</button>}
-                    <div style={{ width: 28, height: 28, borderRadius: 8, border: \`1px solid \${valid ? kol.color + "40" : "#2A2A35"}\`, background: valid ? \`\${kol.color}15\` : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: valid ? kol.color : "#6B6B76" }}>{isExp ? "−" : "+"}</div>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${valid ? kol.color + "40" : "#2A2A35"}`, background: valid ? `${kol.color}15` : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: valid ? kol.color : "#6B6B76" }}>{isExp ? "−" : "+"}</div>
                   </div>
                 </div>
 
                 {isLoad && (
                   <div style={{ padding: "16px 20px", borderTop: "1px solid #1A1A25" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                      <div style={{ width: 16, height: 16, border: \`2px solid \${kol.color}40\`, borderTopColor: kol.color, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                      <div style={{ width: 16, height: 16, border: `2px solid ${kol.color}40`, borderTopColor: kol.color, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                       <span style={{ ...M, fontSize: 12, color: "#6B6B76" }}>{msgs[loadTick % msgs.length]}</span>
                     </div>
                     {[80, 65, 90].map((w, i) => (
                       <div key={i} style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,0.015)", border: "1px solid #151520", marginBottom: 8 }}>
-                        <div style={{ height: 11, width: \`\${w}%\`, background: "rgba(255,255,255,0.04)", borderRadius: 4, marginBottom: 8, animation: \`shimmer 1.5s \${i * 0.2}s infinite\` }} />
+                        <div style={{ height: 11, width: `${w}%`, background: "rgba(255,255,255,0.04)", borderRadius: 4, marginBottom: 8, animation: `shimmer 1.5s ${i * 0.2}s infinite` }} />
                         <div style={{ height: 9, width: "95%", background: "rgba(255,255,255,0.02)", borderRadius: 4 }} />
                       </div>
                     ))}
@@ -318,11 +318,11 @@ export default function KOLTracker() {
                 {isExp && data && !isLoad && (
                   <div style={{ padding: "0 20px 20px", borderTop: "1px solid #1A1A25" }}>
                     {data.themes && !data.themes.startsWith("Latest results") && (
-                      <div style={{ margin: "16px 0", padding: "12px 16px", background: \`\${kol.color}08\`, border: \`1px solid \${kol.color}20\`, borderRadius: 10, ...M, fontSize: 12, color: kol.color, lineHeight: 1.6 }}>🎯 {data.themes}</div>
+                      <div style={{ margin: "16px 0", padding: "12px 16px", background: `${kol.color}08`, border: `1px solid ${kol.color}20`, borderRadius: 10, ...M, fontSize: 12, color: kol.color, lineHeight: 1.6 }}>🎯 {data.themes}</div>
                     )}
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       {data.items?.map((item, i) => (
-                        <div key={i} style={{ padding: "14px 16px", borderRadius: 10, background: item.platform === "error" ? "rgba(239,68,68,0.05)" : "rgba(255,255,255,0.02)", border: \`1px solid \${item.platform === "error" ? "rgba(239,68,68,0.2)" : "#1A1A25"}\`, transition: "border-color 0.2s" }}
+                        <div key={i} style={{ padding: "14px 16px", borderRadius: 10, background: item.platform === "error" ? "rgba(239,68,68,0.05)" : "rgba(255,255,255,0.02)", border: `1px solid ${item.platform === "error" ? "rgba(239,68,68,0.2)" : "#1A1A25"}`, transition: "border-color 0.2s" }}
                           onMouseEnter={e => { if (item.platform !== "error") e.currentTarget.style.borderColor = "#2A2A35"; }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = item.platform === "error" ? "rgba(239,68,68,0.2)" : "#1A1A25"; }}>
                           <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
@@ -332,7 +332,7 @@ export default function KOLTracker() {
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.5 }}>
-                                {item.url ? <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: "#E8E6E1", textDecoration: "none", borderBottom: \`1px solid \${kol.color}40\` }}>{item.title}</a> : item.title}
+                                {item.url ? <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: "#E8E6E1", textDecoration: "none", borderBottom: `1px solid ${kol.color}40` }}>{item.title}</a> : item.title}
                               </div>
                               {item.summary && <div style={{ fontSize: 12, color: "#6B6B76", marginTop: 6, lineHeight: 1.6 }}>{item.summary}</div>}
                               {item.date && <div style={{ ...M, fontSize: 10, color: "#4A4A55", marginTop: 8 }}>{item.date}</div>}
@@ -346,7 +346,7 @@ export default function KOLTracker() {
 
                 {!isExp && data && !isLoad && (
                   <div style={{ padding: "0 20px 14px", ...M, fontSize: 11, color: "#4A4A55", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {valid ? (data.themes || \`\${data.items?.length} items\`) : \`⚠ \${data.items?.[0]?.summary?.slice(0, 50) || "Error"}\`}
+                    {valid ? (data.themes || `${data.items?.length} items`) : `⚠ ${data.items?.[0]?.summary?.slice(0, 50) || "Error"}`}
                   </div>
                 )}
               </div>
@@ -434,7 +434,7 @@ export default function KOLTracker() {
                     onMouseEnter={e => { e.currentTarget.style.borderColor = rec.color + "40"; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = "#1A1A25"; e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
                   >
-                    <div style={{ width: 38, height: 38, borderRadius: 10, background: \`\${rec.color}18\`, border: \`1px solid \${rec.color}30\`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{rec.avatar}</div>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, background: `${rec.color}18`, border: `1px solid ${rec.color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{rec.avatar}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{rec.name}</div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
@@ -462,7 +462,7 @@ export default function KOLTracker() {
         </div>
       </div>
 
-      <style>{\`
+      <style>{`
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes shimmer{0%{opacity:.3}50%{opacity:.6}100%{opacity:.3}}
@@ -471,7 +471,7 @@ export default function KOLTracker() {
         ::-webkit-scrollbar-track{background:transparent}
         ::-webkit-scrollbar-thumb{background:#2A2A35;border-radius:3px}
         input::placeholder{color:#3A3A45}
-      \`}</style>
+      `}</style>
     </div>
   );
 }
