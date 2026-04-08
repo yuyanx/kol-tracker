@@ -114,15 +114,23 @@ export default function KOLTracker() {
   const [recFilter, setRecFilter] = useState("All");
   const [addedFlash, setAddedFlash] = useState(null);
   
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("anthropic_api_key") || "");
+  const [provider, setProvider] = useState("anthropic");
+  const [apiKeys, setApiKeys] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("kol_api_keys")) || {};
+    } catch {
+      return {};
+    }
+  });
   const [showApiInput, setShowApiInput] = useState(false);
 
   useEffect(() => { const id = setInterval(() => setLoadTick(p => p + 1), 2000); return () => clearInterval(id); }, []);
 
   const handleApiKeyChange = (e) => {
     const val = e.target.value;
-    setApiKey(val);
-    localStorage.setItem("anthropic_api_key", val);
+    const newKeys = { ...apiKeys, [provider]: val };
+    setApiKeys(newKeys);
+    localStorage.setItem("kol_api_keys", JSON.stringify(newKeys));
   };
 
   const msgs = ["Searching the web…", "Reading recent posts…", "Analyzing content…", "Building summary…"];
@@ -134,33 +142,83 @@ export default function KOLTracker() {
   const fetchKol = useCallback(async (kol) => {
     setLoading(kol.name);
     try {
-      if (!apiKey) throw new Error("Please enter your Anthropic API Key (top right)");
+      const key = apiKeys[provider];
+      if (!key) throw new Error(`Please enter your ${provider.toUpperCase()} API Key (top right)`);
       
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST", 
-        headers: { 
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerously-allow-browser": "true" 
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514", max_tokens: 1500, system: SYSTEM_PROMPT,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
-          messages: [{ role: "user", content: `Find the latest content from ${kol.name} (${kol.handle} on X/Twitter), a ${kol.field} thought leader. Search for their most recent tweets, articles, videos, or newsletters. Return ONLY valid JSON.` }],
-        }),
-      });
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
-      const result = parseResponse(data.content, kol.name);
-      if (result) { setKolData(p => ({ ...p, [kol.name]: result })); setRefreshed(p => ({ ...p, [kol.name]: new Date() })); }
-      else throw new Error("No results found");
+      let data = null;
+      const prompt = `Find the latest content from ${kol.name} (${kol.handle} on X/Twitter), a ${kol.field} thought leader. Search for their most recent tweets, articles, videos, or newsletters. Return ONLY valid JSON.`;
+
+      if (provider === "anthropic") {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST", 
+          headers: { 
+            "Content-Type": "application/json",
+            "x-api-key": key,
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerously-allow-browser": "true" 
+          },
+          body: JSON.stringify({
+            model: "claude-3-7-sonnet-20250219", max_tokens: 1500, system: SYSTEM_PROMPT,
+            tools: [{ type: "web_search_20250305", name: "web_search" }],
+            messages: [{ role: "user", content: prompt }],
+          }),
+        });
+        if (!res.ok) throw new Error(`API error ${res.status}`);
+        const responseData = await res.json();
+        if (responseData.error) throw new Error(responseData.error.message);
+        data = parseResponse(responseData.content, kol.name);
+
+      } else if (provider === "gemini") {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+            contents: [{ parts: [{ text: prompt }] }],
+            tools: [{ googleSearch: {} }]
+          })
+        });
+        if (!res.ok) throw new Error(`API error ${res.status}`);
+        const responseData = await res.json();
+        if (responseData.error) throw new Error(responseData.error.message);
+        const contentText = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!contentText) throw new Error("No response from Gemini");
+        data = parseResponse([{ type: "text", text: contentText }], kol.name);
+
+      } else if (provider === "perplexity") {
+        const res = await fetch("https://api.perplexity.ai/chat/completions", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${key}`
+          },
+          body: JSON.stringify({
+            model: "sonar",
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: prompt }
+            ]
+          })
+        });
+        if (!res.ok) throw new Error(`API error ${res.status}`);
+        const responseData = await res.json();
+        if (responseData.error) throw new Error(responseData.error.message);
+        const contentText = responseData.choices?.[0]?.message?.content;
+        if (!contentText) throw new Error("No response from Perplexity");
+        data = parseResponse([{ type: "text", text: contentText }], kol.name);
+      }
+
+      if (data) { 
+        setKolData(p => ({ ...p, [kol.name]: data })); 
+        setRefreshed(p => ({ ...p, [kol.name]: new Date() })); 
+      } else {
+        throw new Error("No results found");
+      }
     } catch (err) {
       setKolData(p => ({ ...p, [kol.name]: { items: [{ title: "Search failed", summary: err.message, platform: "error", date: "", url: "" }], themes: "" } }));
     }
     setLoading(null);
-  }, [apiKey]);
+  }, [apiKeys, provider]);
 
   const scanAll = useCallback(async () => {
     setScanning(true);
@@ -223,21 +281,26 @@ export default function KOLTracker() {
             <p style={{ color: "#6B6B76", fontSize: 14, marginTop: 6, ...M }}>Tracking {kols.length} thought leaders · AI · PM · Tech</p>
           </div>
           
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative", display: "flex", gap: "10px", alignItems: "center" }}>
+            <select value={provider} onChange={e => setProvider(e.target.value)} style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid #2A2A35", background: "rgba(255,255,255,0.03)", color: "#E8E6E1", ...M, fontSize: 11, cursor: "pointer", outline: "none" }}>
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="gemini">Google (Gemini)</option>
+              <option value="perplexity">Perplexity (Sonar)</option>
+            </select>
             <button onClick={() => setShowApiInput(!showApiInput)} style={{
               padding: "7px 12px", borderRadius: 8, border: "1px solid #2A2A35", background: "rgba(255,255,255,0.03)", color: "#E8E6E1", ...M, fontSize: 11, cursor: "pointer"
-            }}>🔑 API KEY {apiKey ? "✓" : ""}</button>
+            }}>🔑 API KEY {apiKeys[provider] ? "✓" : ""}</button>
             {showApiInput && (
-              <div style={{ marginTop: 8, padding: 12, borderRadius: 10, border: "1px solid #1A1A25", background: "rgba(255,255,255,0.02)", width: 250, position: "absolute", right: 0, zIndex: 10 }}>
-                <label style={{ ...M, fontSize: 9, color: "#6B6B76", letterSpacing: 1, display: "block", marginBottom: 6 }}>ANTHROPIC API KEY</label>
+              <div style={{ marginTop: 8, padding: 12, borderRadius: 10, border: "1px solid #1A1A25", background: "rgba(255,255,255,0.02)", width: 250, position: "absolute", top: "100%", right: 0, zIndex: 10 }}>
+                <label style={{ ...M, fontSize: 9, color: "#6B6B76", letterSpacing: 1, display: "block", marginBottom: 6 }}>{provider.toUpperCase()} API KEY</label>
                 <input 
                   type="password" 
-                  value={apiKey} 
+                  value={apiKeys[provider] || ""} 
                   onChange={handleApiKeyChange} 
-                  placeholder="sk-ant-..." 
+                  placeholder={provider === "anthropic" ? "sk-ant-..." : provider === "gemini" ? "AIza..." : "pplx-..."} 
                   style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid #2A2A35", background: "#0A0A0F", color: "#E8E6E1", ...M, fontSize: 11, outline: "none" }} 
                 />
-                <p style={{ ...M, fontSize: 9, color: "#4A4A55", marginTop: 6, marginBottom: 0 }}>Required to run Claude queries. Saved locally.</p>
+                <p style={{ ...M, fontSize: 9, color: "#4A4A55", marginTop: 6, marginBottom: 0 }}>Required to run queries. Saved locally.</p>
               </div>
             )}
           </div>
@@ -458,7 +521,7 @@ export default function KOLTracker() {
         )}
 
         <div style={{ marginTop: 48, padding: "20px 0", borderTop: "1px solid #1A1A25", ...M, fontSize: 11, color: "#3A3A45", textAlign: "center" }}>
-          KOL Radar · {kols.length} tracked · Powered by Claude Web Search
+          KOL Radar · {kols.length} tracked · Supports Anthropic, Gemini, Perplexity
         </div>
       </div>
 
